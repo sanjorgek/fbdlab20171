@@ -204,22 +204,23 @@ public class LocalDiskBase {
         return salida;
     }
     
-    private static boolean noDuplica(String nombre, String[] values) throws FileNotFoundException, LocalDiskException{
-        File indexFile = new File(nombre+".txt");
+    private static boolean duplica(String nombre, String[] values) throws FileNotFoundException, LocalDiskException{
+        boolean allEq;
+        File indexFile = new File(nombre);
         BufferedReader br = new BufferedReader(new FileReader(indexFile));
         String dataFile = obtenerLinea(br);
         String[] dataInfo;
         while(dataFile != null){
+            allEq = true;
             dataInfo = dataFile.split("\\|");
-            if(dataInfo.length != 7){
-                throw new LocalDiskException("index corrupted!!");
-            }else{
-                for(int index = 1; index< values.length; index++){
-                    if(!dataInfo[index].equals(values[index])) return false;
-                }
+            for(int index = 0; index< values.length; index++){
+                if(dataInfo[index+1].equals(values[index])) allEq &= true;
+                else allEq &= false;
             }
+            if(allEq) return true;
+            else dataFile = obtenerLinea(br);
         }
-        return true;
+        return false;
     }
     
     public static void actializarArchivo(String nombre, String[] values) throws FileNotFoundException, IOException, LocalDiskException{
@@ -237,13 +238,16 @@ public class LocalDiskBase {
                 }
                 fileName += ".txt";
                 String tupla = arregloACadena(values);
-                if(noDuplica(fileName, values)){
+                if(!duplica(fileName, values)){
                     FileWriter indexFile = new FileWriter(fileName,true);
                     indexFile.write(fileInfo[6]+"|"+tupla+System.getProperty("line.separator"));
                     indexFile.close();
-                    indexFile = new FileWriter("indexes.txt",true);
+                    desindexar(nombre);
+                    indexFile = new FileWriter("indexes.txt");
                     indexFile.write(nombre+"|"+fileInfo[1]+"|"+fileInfo[2]+"|"+fileInfo[3]+"|"+fileInfo[4]+"|"+fileInfo[5]+"|"+(Integer.parseInt(fileInfo[6])+1)+System.getProperty("line.separator"));
                     indexFile.close();
+                }else{
+                    throw new LocalDiskException("Duplicated info");
                 }
             }
         }
@@ -264,9 +268,9 @@ public class LocalDiskBase {
                 }
                 fileName += ".txt";
                 String tupla = arregloACadena(values);
-                if(noDuplica(fileName, values)){
-                    File inputFile = new File(fileName+".txt");
-                    File tempFile = new File(fileName+".txt.tem");
+                if(!duplica(fileName, values)){
+                    File inputFile = new File(fileName);
+                    File tempFile = new File(fileName+".tem");
                     BufferedReader reader = new BufferedReader(new FileReader(inputFile));
                     BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile));
                     String currentLine;
@@ -275,13 +279,14 @@ public class LocalDiskBase {
                         String trimmedLine = currentLine.trim();
                         dataInfo = trimmedLine.split("\\|");
                         if(dataInfo[0].equals(id+"")){
-                            writer.write(arregloACadena(values)+System.getProperty("line.separator"));
+                            writer.write(id+"|"+arregloACadena(values)+System.getProperty("line.separator"));
                         }else{
                             writer.write(trimmedLine+System.getProperty("line.separator"));
                         }
                     }
                     writer.close(); 
-                    reader.close(); 
+                    reader.close();
+                    boolean successful = tempFile.renameTo(inputFile);
                 }
             }
         }
@@ -360,16 +365,38 @@ public class LocalDiskBase {
      */
     public static void main(String[] args) {
         // TODO code application logic here
+        String[] valores = {"paco", "pedro", "de la mar"};
+        String[] valores2 = {"pedro", "paco", "de la mar"};
         try{
             FileWriter newFile = new FileWriter("indexes.txt");
             newFile.close();
-            
             LocalDiskBase.crearArchivo("file1", true, false, false, false);
             LocalDiskBase.eliminarArchivo("file1");
             LocalDiskBase.crearArchivo("file2", true, false, true, false);
             LocalDiskBase.eliminarArchivo("file2");
+            LocalDiskBase.actializarArchivo("file2", valores);
+        }catch(IOException ioe){
+            System.out.println(ioe);
+        }catch(LocalDiskException lde){
+            System.out.println(lde);
+        }
+        //Prueba a fallar
+        try{
+            LocalDiskBase.actializarArchivo("file2", valores);
+        }catch(IOException ioe){
+            System.out.println(ioe);
+        }catch(LocalDiskException lde){}
+
+        try{
+            LocalDiskBase.actializarArchivo("file2", valores2);
+            String[] valores3 = {"juan", "paco", "pedro de la mar"};
+            LocalDiskBase.actializarArchivo("file2", 1, valores3);
+            
+            
             
             File fileToDelete = new File("indexes.txt");
+            fileToDelete.delete();
+            fileToDelete = new File("file2_"+new SimpleDateFormat("ddMMyyyy").format(new Date())+".txt");
             fileToDelete.delete();
         }catch(IOException ioe){
             System.out.println(ioe);
