@@ -13,6 +13,7 @@ import java.io.FileReader;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.text.SimpleDateFormat;
+import java.util.List;
 import java.util.Date;
 
 /**
@@ -74,11 +75,7 @@ public class LocalDiskBase {
         }
     } 
     
-    private static boolean permiteActualizaciones(String name){
-        return false;
-    } 
-    
-    private static void respaldarDatos(String nombre) throws FileNotFoundException, LocalDiskException{
+    private static boolean permiteActualizaciones(String nombre) throws FileNotFoundException, LocalDiskException{
         int indexFile = indexado(nombre);
         if(indexFile==-1){
             throw new LocalDiskException("");
@@ -88,9 +85,30 @@ public class LocalDiskBase {
             if(dataInfo.length != 7){
                 throw new LocalDiskException("indexes corrupted.");
             }else{
+                if(dataInfo[3].equals("true")) return true;
+                else return false;
+            }
+        }
+    } 
+    
+    private static void respaldarDatos(String nombre) throws FileNotFoundException, IOException, LocalDiskException{
+        int numberFile = indexado(nombre);
+        if(numberFile==-1){
+            throw new LocalDiskException("");
+        }else{
+            String dataFile = obtenerLinea("indexes", numberFile);
+            String[] dataInfo = dataFile.split("\\|");
+            if(dataInfo.length != 7){
+                throw new LocalDiskException("indexes corrupted.");
+            }else{
+                String fecha = new SimpleDateFormat("ddMMyyyy").format(new Date());
                 File file = new File(nombre+"_"+dataInfo[4]+".txt");
-                File file2 = new File(nombre+"_"+new SimpleDateFormat("ddMMyyyy").format(new Date())+".txt");
+                File file2 = new File(nombre+"_"+fecha+".txt");
                 file.renameTo(file2);
+                desindexar(nombre);
+                FileWriter indexFile = new FileWriter("indexes.txt",true);
+                indexFile.write(nombre+"|"+dataInfo[1]+"|"+dataInfo[2]+"|"+dataInfo[3]+"|"+fecha+"|"+dataInfo[5]+"|"+dataInfo[6]+System.getProperty("line.separator"));
+                indexFile.close();
             }
         }
     }
@@ -150,7 +168,6 @@ public class LocalDiskBase {
         }else{
             String fecha = new SimpleDateFormat("ddMMyyyy").format(new Date());
             String fileName = name;
-            Date createDate = new Date();
             if(backup) fileName +="_"+fecha;
             FileWriter newFile = new FileWriter(fileName+".txt");
             FileWriter indexFile = new FileWriter("indexes.txt",true);
@@ -174,6 +191,98 @@ public class LocalDiskBase {
           }
         }else{
           throw new FileNotFoundException("File can't be deleted'");
+        }
+    }
+    
+    private static String arregloACadena(String[] values){
+        String salida = "";
+        for(int index = 0; index<values.length; index++){
+            salida += values[index];
+            if(index!=values.length-1) salida += "|";
+        }
+        return salida;
+    }
+    
+    private static boolean noDuplica(String nombre, String[] values) throws FileNotFoundException, LocalDiskException{
+        File indexFile = new File(nombre+".txt");
+        BufferedReader br = new BufferedReader(new FileReader(indexFile));
+        String dataFile = obtenerLinea(br);
+        String[] dataInfo;
+        while(dataFile != null){
+            dataInfo = dataFile.split("\\|");
+            if(dataInfo.length != 7){
+                throw new LocalDiskException("index corrupted!!");
+            }else{
+                for(int index = 1; index< values.length; index++){
+                    if(!dataInfo[index].equals(values[index])) return false;
+                }
+            }
+        }
+        return true;
+    }
+    
+    public static void actializarArchivo(String nombre, String[] values) throws FileNotFoundException, IOException, LocalDiskException{
+        int numberFile = indexado(nombre);
+        if(numberFile==-1){
+            throw new LocalDiskException("Bad name.");
+        }else{
+            String[] fileInfo = obtenerLinea("indexes", numberFile).split("\\|");
+            if(fileInfo.length!=7){
+                throw new LocalDiskException("Indexes corrupted.");
+            }else{
+                String fileName = nombre;
+                if(tieneBackup(nombre)){
+                    fileName += "_"+fileInfo[4];
+                }
+                fileName += ".txt";
+                String tupla = arregloACadena(values);
+                if(noDuplica(fileName, values)){
+                    FileWriter indexFile = new FileWriter(fileName,true);
+                    indexFile.write(fileInfo[6]+"|"+tupla+System.getProperty("line.separator"));
+                    indexFile.close();
+                    indexFile = new FileWriter("indexes.txt",true);
+                    indexFile.write(nombre+"|"+fileInfo[1]+"|"+fileInfo[2]+"|"+fileInfo[3]+"|"+fileInfo[4]+"|"+fileInfo[5]+"|"+(Integer.parseInt(fileInfo[6])+1)+System.getProperty("line.separator"));
+                    indexFile.close();
+                }
+            }
+        }
+    }
+    
+    public static void actializarArchivo(String nombre, int id, String[] values) throws FileNotFoundException, IOException, LocalDiskException{
+        int numberFile = indexado(nombre);
+        if(numberFile==-1){
+            throw new LocalDiskException("Bad name.");
+        }else{
+            String[] fileInfo = obtenerLinea("indexes", numberFile).split("\\|");
+            if(fileInfo.length!=7){
+                throw new LocalDiskException("Indexes corrupted.");
+            }else{
+                String fileName = nombre;
+                if(tieneBackup(nombre)){
+                    fileName += "_"+fileInfo[4];
+                }
+                fileName += ".txt";
+                String tupla = arregloACadena(values);
+                if(noDuplica(fileName, values)){
+                    File inputFile = new File(fileName+".txt");
+                    File tempFile = new File(fileName+".txt.tem");
+                    BufferedReader reader = new BufferedReader(new FileReader(inputFile));
+                    BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile));
+                    String currentLine;
+                    String[] dataInfo;
+                    while((currentLine = reader.readLine()) != null){
+                        String trimmedLine = currentLine.trim();
+                        dataInfo = trimmedLine.split("\\|");
+                        if(dataInfo[0].equals(id+"")){
+                            writer.write(arregloACadena(values)+System.getProperty("line.separator"));
+                        }else{
+                            writer.write(trimmedLine+System.getProperty("line.separator"));
+                        }
+                    }
+                    writer.close(); 
+                    reader.close(); 
+                }
+            }
         }
     }
 
