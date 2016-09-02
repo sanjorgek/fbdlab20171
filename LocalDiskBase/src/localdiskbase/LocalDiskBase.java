@@ -12,7 +12,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import localdiskbase.LocalDiskException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 /**
  *
@@ -28,6 +29,71 @@ public class LocalDiskBase {
         }
         return lineReaded;
     }
+
+    private static String obtenerLinea(String name, int numero) throws FileNotFoundException, LocalDiskException{
+        File indexFile = new File(name+".txt");
+        BufferedReader br = new BufferedReader(new FileReader(indexFile));
+        String dataFile = obtenerLinea(br);
+        int count = 0;
+        while(count!= numero && dataFile != null){
+            dataFile = obtenerLinea(br);
+        }
+        if(count==numero) return dataFile;
+        else throw new LocalDiskException("Line not found");
+    }
+    
+    private static boolean puedeBorrarse(String nombre) throws FileNotFoundException, LocalDiskException{
+        int indexFile = indexado(nombre);
+        if(indexFile==-1){
+            throw new LocalDiskException("");
+        }else{
+            String dataFile = obtenerLinea("indexes", indexFile);
+            String[] dataInfo = dataFile.split("\\|");
+            if(dataInfo.length != 7){
+                throw new LocalDiskException("indexes corrupted.");
+            }else{
+                if(dataInfo[1].equals("true")) return true;
+                else return false;
+            }
+        }
+    } 
+    
+    private static boolean tieneBackup(String nombre) throws FileNotFoundException, LocalDiskException{
+        int indexFile = indexado(nombre);
+        if(indexFile==-1){
+            throw new LocalDiskException("");
+        }else{
+            String dataFile = obtenerLinea("indexes", indexFile);
+            String[] dataInfo = dataFile.split("\\|");
+            if(dataInfo.length != 7){
+                throw new LocalDiskException("indexes corrupted.");
+            }else{
+                if(dataInfo[3].equals("true")) return true;
+                else return false;
+            }
+        }
+    } 
+    
+    private static boolean permiteActualizaciones(String name){
+        return false;
+    } 
+    
+    private static void respaldarDatos(String nombre) throws FileNotFoundException, LocalDiskException{
+        int indexFile = indexado(nombre);
+        if(indexFile==-1){
+            throw new LocalDiskException("");
+        }else{
+            String dataFile = obtenerLinea("indexes", indexFile);
+            String[] dataInfo = dataFile.split("\\|");
+            if(dataInfo.length != 7){
+                throw new LocalDiskException("indexes corrupted.");
+            }else{
+                File file = new File(nombre+"_"+dataInfo[4]+".txt");
+                File file2 = new File(nombre+"_"+new SimpleDateFormat("ddMMyyyy").format(new Date())+".txt");
+                file.renameTo(file2);
+            }
+        }
+    }
     
     private static int indexado(String name) throws FileNotFoundException, LocalDiskException {
         int resultSearch = -1;
@@ -39,7 +105,7 @@ public class LocalDiskBase {
         int count = 0;
         while(dataFile != null && flag){
             dataInfo = dataFile.split("\\|");
-            if(dataInfo.length != 6){
+            if(dataInfo.length != 7){
                 throw new LocalDiskException("index corrupted!!");
             }else{
                 if(dataInfo[0].equals(name)){
@@ -82,9 +148,13 @@ public class LocalDiskBase {
         if(indexado(name)!=-1){
             throw new LocalDiskException("File already exists");
         }else{
-            FileWriter newFile = new FileWriter(name);
+            String fecha = new SimpleDateFormat("ddMMyyyy").format(new Date());
+            String fileName = name;
+            Date createDate = new Date();
+            if(backup) fileName +="_"+fecha;
+            FileWriter newFile = new FileWriter(fileName+".txt");
             FileWriter indexFile = new FileWriter("indexes.txt",true);
-            indexFile.write(name+"|"+delete+"|"+update+"|"+backup+"|"+reduce+"|"+1+System.getProperty("line.separator"));
+            indexFile.write(name+"|"+delete+"|"+update+"|"+backup+"|"+fecha+"|"+reduce+"|"+1+System.getProperty("line.separator"));
             indexFile.close();
             newFile.close();
         }
@@ -92,10 +162,18 @@ public class LocalDiskBase {
     
     public static void eliminarArchivo(String name) throws FileNotFoundException, 
             IOException, LocalDiskException {
-        File fileToDelete = new File(name);
-        desindexar(name);
-        if(!fileToDelete.delete()){
-            throw new LocalDiskException("File don't deleted");
+        if(puedeBorrarse(name)){
+          if(tieneBackup(name)){
+            respaldarDatos(name);
+          }else{
+            desindexar(name);
+            File fileToDelete = new File(name+".txt");
+            if(!fileToDelete.delete()){
+                throw new LocalDiskException("File don't deleted");
+            }
+          }
+        }else{
+          throw new FileNotFoundException("File can't be deleted'");
         }
     }
 
@@ -105,8 +183,16 @@ public class LocalDiskBase {
     public static void main(String[] args) {
         // TODO code application logic here
         try{
-            LocalDiskBase.crearArchivo("hola.txt", false, false, false, false);
-            LocalDiskBase.eliminarArchivo("hola.txt");
+            FileWriter newFile = new FileWriter("indexes.txt");
+            newFile.close();
+            
+            LocalDiskBase.crearArchivo("file1", true, false, false, false);
+            LocalDiskBase.eliminarArchivo("file1");
+            LocalDiskBase.crearArchivo("file2", true, false, true, false);
+            LocalDiskBase.eliminarArchivo("file2");
+            
+            File fileToDelete = new File("indexes.txt");
+            fileToDelete.delete();
         }catch(IOException ioe){
             System.out.println(ioe);
         }catch(LocalDiskException lde){
