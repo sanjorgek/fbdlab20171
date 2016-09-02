@@ -14,5 +14,9 @@ hs_err_pid*
 # creadas por netBeans
 **/private/private.xml
 **/private/private.properties
-/LocalDiskBase/build/
-/LocalDiskBase/indexes.txt
+/LocalDiskDB/nbproject/private/
+/SystemManagerDB/nbproject/private/
+/SystemManagerDB/build/
+/LocalDiskDB/build/
+/LocalDiskDB/dist/
+/SystemManagerDB/dist/

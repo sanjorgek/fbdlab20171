@@ -3,20 +3,20 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package localdiskbase;
+package localdiskdb;
 
 /**
  *
  * @author sanjorgek
  */
-public class LocalDiskException extends Exception {
+public class LocalDiskDBException extends Exception {
 
-    public LocalDiskException() {
+    public LocalDiskDBException() {
         super("Unknown error");
     }
 
-    public LocalDiskException(String message) {
+    public LocalDiskDBException(String message) {
         super(message);
     }
-
+    
 }
