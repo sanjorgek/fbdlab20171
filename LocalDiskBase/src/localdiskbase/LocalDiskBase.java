@@ -14,6 +14,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.text.SimpleDateFormat;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Date;
 
 /**
@@ -284,6 +285,74 @@ public class LocalDiskBase {
                 }
             }
         }
+    }
+    
+    public static String buscarEnArchivo(String nombre, int id) throws FileNotFoundException, IOException, LocalDiskException{
+        String result = null;
+        int numberFile = indexado(nombre);
+        if(numberFile==-1){
+            throw new LocalDiskException("Bad name.");
+        }else{
+            String[] fileInfo = obtenerLinea("indexes", numberFile).split("\\|");
+            if(fileInfo.length!=7){
+                throw new LocalDiskException("Indexes corrupted.");
+            }else{
+                String fileName = nombre;
+                if(tieneBackup(nombre)){
+                    fileName += "_"+fileInfo[4];
+                }
+                fileName += ".txt";
+                File inputFile = new File(fileName+".txt");
+                BufferedReader reader = new BufferedReader(new FileReader(inputFile));
+                String currentLine;
+                String[] dataInfo;
+                boolean bandera = true;
+                while((currentLine = reader.readLine()) != null && bandera){
+                    String trimmedLine = currentLine.trim();
+                    dataInfo = trimmedLine.split("\\|");
+                    if(dataInfo[0].equals(id+"")){
+                        result = arregloACadena(dataInfo);
+                        bandera = false;
+                    }
+                }
+                reader.close();
+            }
+        }
+        return result;
+    }
+    
+    public static List<String> buscarEnArchivo(String nombre, int number, String valor)throws FileNotFoundException, IOException, LocalDiskException{
+        List<String> result = new ArrayList<String>();
+        int numberFile = indexado(nombre);
+        if(numberFile==-1){
+            throw new LocalDiskException("Bad name.");
+        }else{
+            String[] fileInfo = obtenerLinea("indexes", numberFile).split("\\|");
+            if(fileInfo.length!=7){
+                throw new LocalDiskException("Indexes corrupted.");
+            }else{
+                String fileName = nombre;
+                if(tieneBackup(nombre)){
+                    fileName += "_"+fileInfo[4];
+                }
+                fileName += ".txt";
+                File inputFile = new File(fileName+".txt");
+                BufferedReader reader = new BufferedReader(new FileReader(inputFile));
+                String currentLine;
+                String[] dataInfo;
+                boolean bandera = true;
+                while((currentLine = reader.readLine()) != null && bandera){
+                    String trimmedLine = currentLine.trim();
+                    dataInfo = trimmedLine.split("\\|");
+                    if(dataInfo[number].equals(valor)){
+                        result.add(arregloACadena(dataInfo));
+                        bandera = false;
+                    }
+                }
+                reader.close();
+            }
+        }
+        return result;
     }
 
     /**
