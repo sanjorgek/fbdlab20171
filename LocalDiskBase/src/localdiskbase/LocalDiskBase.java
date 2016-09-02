@@ -307,7 +307,7 @@ public class LocalDiskBase {
                     fileName += "_"+fileInfo[4];
                 }
                 fileName += ".txt";
-                File inputFile = new File(fileName+".txt");
+                File inputFile = new File(fileName);
                 BufferedReader reader = new BufferedReader(new FileReader(inputFile));
                 String currentLine;
                 String[] dataInfo;
@@ -341,17 +341,15 @@ public class LocalDiskBase {
                     fileName += "_"+fileInfo[4];
                 }
                 fileName += ".txt";
-                File inputFile = new File(fileName+".txt");
+                File inputFile = new File(fileName);
                 BufferedReader reader = new BufferedReader(new FileReader(inputFile));
                 String currentLine;
                 String[] dataInfo;
-                boolean bandera = true;
-                while((currentLine = reader.readLine()) != null && bandera){
+                while((currentLine = reader.readLine()) != null){
                     String trimmedLine = currentLine.trim();
                     dataInfo = trimmedLine.split("\\|");
                     if(dataInfo[number].equals(valor)){
                         result.add(arregloACadena(dataInfo));
-                        bandera = false;
                     }
                 }
                 reader.close();
@@ -391,8 +389,12 @@ public class LocalDiskBase {
             LocalDiskBase.actializarArchivo("file2", valores2);
             String[] valores3 = {"juan", "paco", "pedro de la mar"};
             LocalDiskBase.actializarArchivo("file2", 1, valores3);
-            
-            
+            if(!LocalDiskBase.buscarEnArchivo("file2", 2).equals("2|pedro|paco|de la mar")){
+                throw new LocalDiskException("test error at find one element");
+            }
+            if(LocalDiskBase.buscarEnArchivo("file2", 2, "paco").size()!=2){
+                throw new LocalDiskException("test error at find many elements");
+            }
             
             File fileToDelete = new File("indexes.txt");
             fileToDelete.delete();
