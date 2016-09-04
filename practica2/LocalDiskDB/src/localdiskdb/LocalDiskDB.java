@@ -38,6 +38,7 @@ public class LocalDiskDB {
         int count = 0;
         while(count!= numero && dataFile != null){
             dataFile = obtenerLinea(br);
+            count++;
         }
         if(count==numero) return dataFile;
         else throw new LocalDiskDBException("Line not found");
@@ -46,7 +47,7 @@ public class LocalDiskDB {
     private static boolean puedeBorrarse(String nombre) throws FileNotFoundException, LocalDiskDBException{
         int indexFile = indexado(nombre);
         if(indexFile==-1){
-            throw new LocalDiskDBException("");
+            throw new LocalDiskDBException("File not founded");
         }else{
             String dataFile = obtenerLinea("indexes", indexFile);
             String[] dataInfo = dataFile.split("\\|");
@@ -212,7 +213,7 @@ public class LocalDiskDB {
         while(dataFile != null){
             allEq = true;
             dataInfo = dataFile.split("\\|");
-            for(int index = 0; index< values.length; index++){
+            for(int index = 0; index< values.length && index +1< dataInfo.length; index++){
                 if(dataInfo[index+1].equals(values[index])) allEq &= true;
                 else allEq &= false;
             }
@@ -355,5 +356,61 @@ public class LocalDiskDB {
             }
         }
         return result;
+    }
+    
+    public static void borrarTupla(String nombre, int id) throws FileNotFoundException, IOException, LocalDiskDBException{
+        int numberFile = indexado(nombre);
+        if(numberFile==-1){
+            throw new LocalDiskDBException("Bad name.");
+        }else{
+            String[] fileInfo = obtenerLinea("indexes", numberFile).split("\\|");
+            if(fileInfo.length!=7){
+                throw new LocalDiskDBException("Indexes corrupted.");
+            }else if(!fileInfo[5].equals("true")){
+                throw new LocalDiskDBException("Don't allow this option.");
+            }else{
+                String fileName = nombre;
+                if(tieneBackup(nombre)){
+                    fileName += "_"+fileInfo[4];
+                }
+                fileName += ".txt";
+                File inputFile = new File(fileName);
+                File tempFile = new File(fileName+".tem");
+                BufferedReader reader = new BufferedReader(new FileReader(inputFile));
+                BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile));
+                String currentLine;
+                String[] dataInfo;
+                while((currentLine = reader.readLine()) != null){
+                    String trimmedLine = currentLine.trim();
+                    dataInfo = trimmedLine.split("\\|");
+                    if(!dataInfo[0].equals(id+"")){
+                        writer.write(trimmedLine+System.getProperty("line.separator"));
+                    }
+                }
+                writer.close(); 
+                reader.close(); 
+                boolean successful = tempFile.renameTo(inputFile);
+                if(!successful){
+                    throw new LocalDiskDBException("File don't deleted");
+                }
+            }
+        }
+    }
+    
+    public static void generarNuevaTabla(String nombre1, int param1, String value, 
+            String nombre2, int param2, String nombreFinal) throws FileNotFoundException, 
+            IOException, LocalDiskDBException{
+        List<String> elements1 = buscarEnArchivo(nombre1, param1, value);
+        if(elements1.size()==1){
+            String id = elements1.get(0).split("\\|")[0];
+            List<String> elements2 = buscarEnArchivo(
+                    nombre2, param2, id);
+            String fileName = nombreFinal+"_"+id+".txt";
+            FileWriter newFile = new FileWriter(fileName);
+            for(int index = 0; index < elements2.size(); index++){
+                newFile.write(elements2.get(index)+System.getProperty("line.separator"));
+            }
+            newFile.close();
+        }else throw new LocalDiskDBException("Fist param not founded");
     }
 }

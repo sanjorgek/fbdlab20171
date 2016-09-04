@@ -20,3 +20,7 @@ hs_err_pid*
 /LocalDiskDB/build/
 /LocalDiskDB/dist/
 /SystemManagerDB/dist/
+/practica2/LocalDiskDB/nbproject/private/
+/practica2/SystemManagerDB/nbproject/private/
+/practica2/LocalDiskDB/build/
+/practica2/LocalDiskDB/dist/
